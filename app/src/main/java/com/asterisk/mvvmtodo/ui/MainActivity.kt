@@ -1,8 +1,11 @@
-package com.asterisk.mvvmtodo
+package com.asterisk.mvvmtodo.ui
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import com.asterisk.mvvmtodo.R
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
