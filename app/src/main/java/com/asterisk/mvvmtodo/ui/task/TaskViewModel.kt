@@ -9,9 +9,11 @@ import com.asterisk.mvvmtodo.data.SortOrder
 import com.asterisk.mvvmtodo.data.Task
 import com.asterisk.mvvmtodo.data.TaskDao
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 
 
@@ -24,6 +26,9 @@ class TaskViewModel @ViewModelInject constructor(
     val searchQuery = MutableStateFlow("")
 
     var preferencesFlow = preferencesManager.preferencesFlow
+
+    private val tasksEventChannel = Channel<TasksEvent>()
+    val taskEvent = tasksEventChannel.receiveAsFlow()
 
 //    val sortOrder = MutableStateFlow(SortOrder.BY_DATE)
 //
@@ -56,5 +61,17 @@ class TaskViewModel @ViewModelInject constructor(
     }
 
     fun onTaskSelected(task: Task) {}
+    fun onTaskSwipe(task: Task)  = viewModelScope.launch {
+        taskDao.delete(task)
+        tasksEventChannel.send(TasksEvent.ShowUndoDeleteTaskMessage(task))
+    }
+
+    fun onUndoDeleteClick(task: Task) = viewModelScope.launch {
+        taskDao.insertTask(task)
+    }
+
+    sealed class TasksEvent() {
+        data class ShowUndoDeleteTaskMessage(val task: Task): TasksEvent()
+    }
 
 }
