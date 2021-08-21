@@ -1,7 +1,6 @@
 package com.asterisk.mvvmtodo.data
 
 import androidx.room.*
-import com.asterisk.mvvmtodo.ui.task.SortOrder
 import kotlinx.coroutines.flow.Flow
 
 @Dao
