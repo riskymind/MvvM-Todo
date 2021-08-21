@@ -1,13 +1,23 @@
 package com.asterisk.mvvmtodo.data
 
 import androidx.room.*
+import com.asterisk.mvvmtodo.ui.task.SortOrder
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface TaskDao {
 
-    @Query("SELECT * FROM task_table WHERE name LIKE '%' || :searchQuery || '%' ORDER BY important DESC")
-    fun getTasks(searchQuery: String): Flow<List<Task>>
+    fun getTasks(query: String, sortOrder: SortOrder, hideCompleted: Boolean): Flow<List<Task>> =
+        when(sortOrder) {
+            SortOrder.BY_NAME -> getTasksSortedByName(query, hideCompleted)
+            SortOrder.BY_DATE -> getTasksSortedByDate(query, hideCompleted)
+        }
+
+    @Query("SELECT * FROM task_table WHERE (completed != :hideCompleted OR completed = 0) AND name LIKE '%' || :searchQuery || '%' ORDER BY important DESC, name")
+    fun getTasksSortedByName(searchQuery: String, hideCompleted: Boolean): Flow<List<Task>>
+
+    @Query("SELECT * FROM task_table WHERE (completed != :hideCompleted OR completed = 0) AND name LIKE '%' || :searchQuery || '%' ORDER BY important DESC, created")
+    fun getTasksSortedByDate(searchQuery: String, hideCompleted: Boolean): Flow<List<Task>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTask(task: Task)
