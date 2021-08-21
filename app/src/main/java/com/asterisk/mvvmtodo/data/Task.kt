@@ -10,7 +10,7 @@ import java.text.DateFormat
 @Parcelize
 data class Task(
     @PrimaryKey(autoGenerate = true)
-    val id: Int = 0
+    val id: Int = 0,
     val name: String,
     val important: Boolean = false,
     val completed: Boolean = false,
