@@ -6,6 +6,7 @@ import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
 import com.asterisk.mvvmtodo.data.PreferencesManager
 import com.asterisk.mvvmtodo.data.SortOrder
+import com.asterisk.mvvmtodo.data.Task
 import com.asterisk.mvvmtodo.data.TaskDao
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -37,6 +38,8 @@ class TaskViewModel @ViewModelInject constructor(
         taskDao.getTasks(query, filterPreferences.sortOrder, filterPreferences.hideCompleted)
     }
 
+    @ExperimentalCoroutinesApi
+    val task = taskFlow .asLiveData()
 
     fun onSortOrderSelected(sortOrder: SortOrder) = viewModelScope.launch {
         preferencesManager.updateSortOrder(sortOrder)
@@ -46,6 +49,12 @@ class TaskViewModel @ViewModelInject constructor(
         preferencesManager.hideCompletes(hideCompleted)
     }
 
-    @ExperimentalCoroutinesApi
-    val task = taskFlow .asLiveData()
+
+
+    fun onTaskCheckedChange(task: Task, checked: Boolean) = viewModelScope.launch {
+        taskDao.update(task.copy(completed = checked))
+    }
+
+    fun onTaskSelected(task: Task) {}
+
 }
