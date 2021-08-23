@@ -8,6 +8,8 @@ import com.asterisk.mvvmtodo.data.PreferencesManager
 import com.asterisk.mvvmtodo.data.SortOrder
 import com.asterisk.mvvmtodo.data.Task
 import com.asterisk.mvvmtodo.data.TaskDao
+import com.asterisk.mvvmtodo.ui.ADD_TASK_RESULT_OK
+import com.asterisk.mvvmtodo.ui.EDIT_TASK_RESULT_OK
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,7 +22,7 @@ import kotlinx.coroutines.launch
 class TaskViewModel @ViewModelInject constructor(
     private val taskDao: TaskDao,
     private val preferencesManager: PreferencesManager
-): ViewModel() {
+) : ViewModel() {
 
     @ExperimentalCoroutinesApi
     val searchQuery = MutableStateFlow("")
@@ -37,14 +39,14 @@ class TaskViewModel @ViewModelInject constructor(
     @ExperimentalCoroutinesApi
     private val taskFlow = combine(
         searchQuery, preferencesFlow
-    ) {query, filterPreferences ->
+    ) { query, filterPreferences ->
         Pair(query, filterPreferences)
     }.flatMapLatest { (query, filterPreferences) ->
         taskDao.getTasks(query, filterPreferences.sortOrder, filterPreferences.hideCompleted)
     }
 
     @ExperimentalCoroutinesApi
-    val task = taskFlow .asLiveData()
+    val task = taskFlow.asLiveData()
 
     fun onSortOrderSelected(sortOrder: SortOrder) = viewModelScope.launch {
         preferencesManager.updateSortOrder(sortOrder)
@@ -55,13 +57,15 @@ class TaskViewModel @ViewModelInject constructor(
     }
 
 
-
     fun onTaskCheckedChange(task: Task, checked: Boolean) = viewModelScope.launch {
         taskDao.update(task.copy(completed = checked))
     }
 
-    fun onTaskSelected(task: Task) {}
-    fun onTaskSwipe(task: Task)  = viewModelScope.launch {
+    fun onTaskSelected(task: Task) = viewModelScope.launch {
+        tasksEventChannel.send(TasksEvent.NavigateToEditTaskScreen(task))
+    }
+
+    fun onTaskSwipe(task: Task) = viewModelScope.launch {
         taskDao.delete(task)
         tasksEventChannel.send(TasksEvent.ShowUndoDeleteTaskMessage(task))
     }
@@ -70,8 +74,35 @@ class TaskViewModel @ViewModelInject constructor(
         taskDao.insertTask(task)
     }
 
+    fun onAddNewTaskClick() = viewModelScope.launch {
+        tasksEventChannel.send(TasksEvent.NavigateToAddTaskScreen)
+    }
+
+    fun addEditResult(result: Int) {
+        when (result) {
+            ADD_TASK_RESULT_OK -> showTaskSaveConfirmationMsg("Task Added")
+            EDIT_TASK_RESULT_OK -> showTaskEditConfirmationMsg("Task Updated")
+        }
+    }
+
+    private fun showTaskEditConfirmationMsg(msg: String) = viewModelScope.launch {
+        tasksEventChannel.send(TasksEvent.ShowTaskSaveConfirmationMsg(msg))
+    }
+
+    private fun showTaskSaveConfirmationMsg(msg: String) = viewModelScope.launch {
+        tasksEventChannel.send(TasksEvent.ShowTaskSaveConfirmationMsg(msg))
+    }
+
+    fun onDeleteCompletedTaskClick() = viewModelScope.launch{
+        tasksEventChannel.send(TasksEvent.NavigateToDeleteAllCompletedScreen)
+    }
+
     sealed class TasksEvent() {
-        data class ShowUndoDeleteTaskMessage(val task: Task): TasksEvent()
+        object NavigateToAddTaskScreen : TasksEvent()
+        data class NavigateToEditTaskScreen(val task: Task) : TasksEvent()
+        data class ShowUndoDeleteTaskMessage(val task: Task) : TasksEvent()
+        data class ShowTaskSaveConfirmationMsg(val msg: String): TasksEvent()
+        object NavigateToDeleteAllCompletedScreen: TasksEvent()
     }
 
 }

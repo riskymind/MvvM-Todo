@@ -7,8 +7,10 @@ import android.view.MenuItem
 import android.view.View
 import androidx.appcompat.widget.SearchView
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.setFragmentResultListener
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -16,6 +18,7 @@ import com.asterisk.mvvmtodo.R
 import com.asterisk.mvvmtodo.data.SortOrder
 import com.asterisk.mvvmtodo.data.Task
 import com.asterisk.mvvmtodo.databinding.FragmentTasksBinding
+import com.asterisk.mvvmtodo.utils.exhaustive
 import com.asterisk.mvvmtodo.utils.onQueryTextChange
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
@@ -60,6 +63,15 @@ class TasksFragment: Fragment(R.layout.fragment_tasks), TaskAdapter.OnItemClickL
                 }
 
             }).attachToRecyclerView(recyclerViewTasks)
+
+            fabAddTask.setOnClickListener {
+                viewModel.onAddNewTaskClick()
+            }
+        }
+
+        setFragmentResultListener("add_edit_request") { _, bundle ->
+            val result = bundle.getInt("add_edit_result")
+            viewModel.addEditResult(result)
         }
 
         viewModel.task.observe(viewLifecycleOwner) {
@@ -75,7 +87,22 @@ class TasksFragment: Fragment(R.layout.fragment_tasks), TaskAdapter.OnItemClickL
                                 viewModel.onUndoDeleteClick(event.task)
                             }.show()
                     }
-                }
+                    TaskViewModel.TasksEvent.NavigateToAddTaskScreen -> {
+                        val action = TasksFragmentDirections.actionTasksFragmentToAddEditTaskFragment(null, "New Task")
+                        findNavController().navigate(action)
+                    }
+                    is TaskViewModel.TasksEvent.NavigateToEditTaskScreen -> {
+                        val action = TasksFragmentDirections.actionTasksFragmentToAddEditTaskFragment(event.task, "Edit Task")
+                        findNavController().navigate(action)
+                    }
+                    is TaskViewModel.TasksEvent.ShowTaskSaveConfirmationMsg -> {
+                        Snackbar.make(requireView(), event.msg, Snackbar.LENGTH_SHORT).show()
+                    }
+                    TaskViewModel.TasksEvent.NavigateToDeleteAllCompletedScreen -> {
+                        val action = TasksFragmentDirections.actionGlobalDeleteAllCompletedDialogFragment()
+                        findNavController().navigate(action)
+                    }
+                }.exhaustive
             }
         }
         setHasOptionsMenu(true)
@@ -118,6 +145,7 @@ class TasksFragment: Fragment(R.layout.fragment_tasks), TaskAdapter.OnItemClickL
             }
 
             R.id.action_delete_all_complete_task -> {
+                viewModel.onDeleteCompletedTaskClick()
                 true
             }
             else -> super.onOptionsItemSelected(item)
